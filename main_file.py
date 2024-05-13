@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import pdfplumber
 import re
-import rpack
 import cv2
 import pytesseract
 
@@ -10,10 +9,8 @@ print('sdfsdfsadfsdfsa')
 from wand.image import Image as WandImage
 from PIL import Image, ImageDraw
 
-
-
 pdf_path = 'assets\\test_page190.pdf'
-
+image_path = 'assets\\test_page3.png'
 # config parameter
 number_of_option = 4
 number_of_column = 0
@@ -21,6 +18,7 @@ question_margin_top = 5
 question_margin_bottom = 5
 question_margin_left = 5
 question_margin_right = 1
+input_method = 'image'
 
 
 def extract_text_with_coords(image_path):
@@ -50,13 +48,14 @@ def extract_text_with_coords(image_path):
         x, y, w, h = cv2.boundingRect(contour)
 
         # Extract text using Tesseract OCR
-        text = pytesseract.image_to_string(img[y:y+h, x:x+w], config='--psm 6')
+        text = pytesseract.image_to_string(img[y:y + h, x:x + w], config='--psm 6')
 
         # If text is not empty, append data
         if text:
-            text_data.append((text.strip(), x, y, x+w, y+h))
+            text_data.append((text.strip(), x, y, x + w, y + h))
 
     return text_data
+
 
 # Detect the target rectangule is in main rect or not
 def is_in_the_region(mainRect, targetRect):
@@ -118,16 +117,18 @@ with pdfplumber.open(pdf_path) as pdf:
     detected_options = {}
     detected_options_box = []
 
+    if (input_method == 'image'):
+        extracted_texts_with_coords = extract_text_with_coords(image_path)
+    else:
 
+        pdf.open(pdf_path)
 
-    pdf.open(pdf_path)
+        # Döküman boyutlarını ekrana basma
+        print(f"Döküman Boyutları: Genişlik: {pdf.pages[0].width}, Yükseklik: {pdf.pages[0].height}")
 
-    # Döküman boyutlarını ekrana basma
-    print(f"Döküman Boyutları: Genişlik: {pdf.pages[0].width}, Yükseklik: {pdf.pages[0].height}")
-
-    # İlk sayfa için metin içeriği ve metinlerin koordinatlarını çıkarma
-    page = pdf.pages[0]
-    extracted_texts_with_coords = page.extract_words()
+        # İlk sayfa için metin içeriği ve metinlerin koordinatlarını çıkarma
+        page = pdf.pages[0]
+        extracted_texts_with_coords = page.extract_words()
 
     for item in extracted_texts_with_coords:
         # print(f"item index: {item}")
