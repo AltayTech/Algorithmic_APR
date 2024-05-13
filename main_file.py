@@ -3,9 +3,10 @@ import pdfplumber
 import re
 import cv2
 import pytesseract
+# import pandas as pd
+import pandas as pd
 
 print('sdfsdfsadfsdfsa')
-
 from wand.image import Image as WandImage
 from PIL import Image, ImageDraw
 
@@ -36,22 +37,25 @@ def extract_text_with_coords(image_path):
     datas = pytesseract.image_to_data(gray_image)
 
     # Process the bounding boxes
-    for box in boxes.splitlines():
-        box = box.split()
-        # Extract coordinates and text
-        x, y, w, h = int(box[1]), int(box[2]), int(box[3]), int(box[4])
-        text = box[0]
-        # Draw bounding box
-        # cv2.rectangle(image, (x, y), (w, h), (0, 255, 0), 2)
-        # Display text
-        # cv2.putText(image, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    # for box in boxes.splitlines():
+    #     box = box.split()
+    #     # Extract coordinates and text
+    #     x, y, w, h = int(box[1]), int(box[2]), int(box[3]), int(box[4])
+    #     text = box[0]
+    #     # Draw bounding box
+    #     # cv2.rectangle(image, (x, y), (w, h), (0, 255, 0), 2)
+    #     # Display text
+    #     # cv2.putText(image, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
     # print(f"boxes: {boxes}")
+    print(f"boxes: {text}")
     print(f"datas: {datas}")
+    print(f"datas: {datas[0]}")
+    # print(f"datas: {pd.DataFrame(datas,columns=['level',	'page_num'	,'block_num',	'par_num'	,'line_num',	'word_num',	'left'	,'top',	'width',	'height',	'conf',	'text'])}")
 
     # Display the result
-    cv2.imshow('Image', image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.imshow('Image', image)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
     # """
     # Reads an image, extracts text with bounding box coordinates,
     # and returns a list of (text, x1, y1, x2, y2) tuples.
@@ -75,16 +79,18 @@ def extract_text_with_coords(image_path):
     # print(f"text_contours: {text_contours}")
     #
     text_data = []
-    for contour in text_contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        print(f"x, y, w, h: {x, y, w, h}")
-
-        # Extract text using Tesseract OCR
-        # text = pytesseract.image_to_string(img[y:y + h, x:x + w], config='--psm 6')
+    # for index, text_datas in pd.DataFrame([datas]):
+    #     print(f"text_datas: {text_datas}")
 
         # If text is not empty, append data
-        if text:
-            text_data.append((text.strip(), x, y, x + w, y + h))
+        # if text_datas['text']:
+            # text_data.append((text_datas['text'].strip(), x, y, x + w, y + h))
+        # text_data.append({'text':text_datas['text'].to_string(),
+        #                       'x0':text_datas['left'],
+        #                       'top':text_datas['top'],
+        #                       'x1':text_datas['left']+text_datas['width'],
+        #                       'bottom':text_datas['left']+text_datas['height'],
+        #                       })
 
     return text_data
 
