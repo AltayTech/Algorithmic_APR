@@ -2,22 +2,61 @@
 import pdfplumber
 import re
 import rpack
+import cv2
+import pytesseract
 
 print('sdfsdfsadfsdfsa')
 
 from wand.image import Image as WandImage
 from PIL import Image, ImageDraw
 
-pdf_path = 'assets\\test_page2.pdf'
 
-# config
+
+pdf_path = 'assets\\test_page190.pdf'
+
+# config parameter
 number_of_option = 4
-number_of_column = 2
+number_of_column = 0
 question_margin_top = 5
 question_margin_bottom = 5
 question_margin_left = 5
-question_margin_right = 5
+question_margin_right = 1
 
+
+def extract_text_with_coords(image_path):
+    """
+    Reads an image, extracts text with bounding box coordinates,
+    and returns a list of (text, x1, y1, x2, y2) tuples.
+
+    Args:
+        image_path (str): Path to the image file.
+
+    Returns:
+        list: A list of tuples containing the extracted text and its coordinates.
+    """
+
+    img = cv2.imread(image_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Handle potential noise and uneven lighting
+    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    blur = cv2.GaussianBlur(thresh, (3, 3), 0)
+
+    # Detect text regions using adaptive thresholding
+    text_contours = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+
+    text_data = []
+    for contour in text_contours:
+        x, y, w, h = cv2.boundingRect(contour)
+
+        # Extract text using Tesseract OCR
+        text = pytesseract.image_to_string(img[y:y+h, x:x+w], config='--psm 6')
+
+        # If text is not empty, append data
+        if text:
+            text_data.append((text.strip(), x, y, x+w, y+h))
+
+    return text_data
 
 # Detect the target rectangule is in main rect or not
 def is_in_the_region(mainRect, targetRect):
@@ -78,6 +117,9 @@ with pdfplumber.open(pdf_path) as pdf:
     all_boxes = []
     detected_options = {}
     detected_options_box = []
+
+
+
     pdf.open(pdf_path)
 
     # Döküman boyutlarını ekrana basma
@@ -173,9 +215,10 @@ with pdfplumber.open(pdf_path) as pdf:
                           nexVerticallyQuestionY)
         detect_question[item] = (x0, y0, x1, y1)
 
-        x0, y0, x1, y1 = (detect_question[item][0] - question_margin_left, detect_question[item][1] - question_margin_top,
-                          nextHorizontalQuestionX + question_margin_right,
-                          nexVerticallyQuestionY + question_margin_bottom)
+        x0, y0, x1, y1 = (
+            detect_question[item][0] - question_margin_left, detect_question[item][1] - question_margin_top,
+            nextHorizontalQuestionX + question_margin_right,
+            nexVerticallyQuestionY + question_margin_bottom)
         detect_question[item] = (x0, y0, x1, y1)
 
 print(f"detected_options_box: {len(detected_options_box)}")
