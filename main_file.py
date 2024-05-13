@@ -18,37 +18,69 @@ question_margin_top = 5
 question_margin_bottom = 5
 question_margin_left = 5
 question_margin_right = 1
-input_method = 'image'
-
+input_method = 'pdf'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 def extract_text_with_coords(image_path):
-    """
-    Reads an image, extracts text with bounding box coordinates,
-    and returns a list of (text, x1, y1, x2, y2) tuples.
+    # Read the image using OpenCV
+    image = cv2.imread(image_path)
 
-    Args:
-        image_path (str): Path to the image file.
+    # Convert the image to grayscale
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    Returns:
-        list: A list of tuples containing the extracted text and its coordinates.
-    """
+    # Perform OCR using pytesseract
+    text = pytesseract.image_to_string(gray_image)
 
-    img = cv2.imread(image_path)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Get the bounding boxes of each detected word
+    boxes = pytesseract.image_to_boxes(gray_image)
+    datas = pytesseract.image_to_data(gray_image)
 
-    # Handle potential noise and uneven lighting
-    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-    blur = cv2.GaussianBlur(thresh, (3, 3), 0)
+    # Process the bounding boxes
+    for box in boxes.splitlines():
+        box = box.split()
+        # Extract coordinates and text
+        x, y, w, h = int(box[1]), int(box[2]), int(box[3]), int(box[4])
+        text = box[0]
+        # Draw bounding box
+        # cv2.rectangle(image, (x, y), (w, h), (0, 255, 0), 2)
+        # Display text
+        # cv2.putText(image, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    # print(f"boxes: {boxes}")
+    print(f"datas: {datas}")
 
-    # Detect text regions using adaptive thresholding
-    text_contours = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
-
+    # Display the result
+    cv2.imshow('Image', image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    # """
+    # Reads an image, extracts text with bounding box coordinates,
+    # and returns a list of (text, x1, y1, x2, y2) tuples.
+    #
+    # Args:
+    #     image_path (str): Path to the image file.
+    #
+    # Returns:
+    #     list: A list of tuples containing the extracted text and its coordinates.
+    # """
+    #
+    # img = cv2.imread(image_path)
+    # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #
+    # # Handle potential noise and uneven lighting
+    # thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    # blur = cv2.GaussianBlur(thresh, (3, 3), 0)
+    #
+    # # Detect text regions using adaptive thresholding
+    # text_contours = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+    # print(f"text_contours: {text_contours}")
+    #
     text_data = []
     for contour in text_contours:
         x, y, w, h = cv2.boundingRect(contour)
+        print(f"x, y, w, h: {x, y, w, h}")
 
         # Extract text using Tesseract OCR
-        text = pytesseract.image_to_string(img[y:y + h, x:x + w], config='--psm 6')
+        # text = pytesseract.image_to_string(img[y:y + h, x:x + w], config='--psm 6')
 
         # If text is not empty, append data
         if text:
@@ -119,6 +151,8 @@ with pdfplumber.open(pdf_path) as pdf:
 
     if (input_method == 'image'):
         extracted_texts_with_coords = extract_text_with_coords(image_path)
+        print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
+
     else:
 
         pdf.open(pdf_path)
@@ -129,6 +163,8 @@ with pdfplumber.open(pdf_path) as pdf:
         # İlk sayfa için metin içeriği ve metinlerin koordinatlarını çıkarma
         page = pdf.pages[0]
         extracted_texts_with_coords = page.extract_words()
+        print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
+
 
     for item in extracted_texts_with_coords:
         # print(f"item index: {item}")
