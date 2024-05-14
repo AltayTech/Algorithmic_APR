@@ -240,10 +240,13 @@ with pdfplumber.open(pdf_path) as pdf:
                                       nexVerticallyQuestionY)
                     detect_question[item] = (x0, y0, x1, y1)
         number_of_included_option = 0
+        have_last_option = False
         for detected_options_item in detected_options_box:
             for option_item in detected_options_item:
                 if is_in_the_region(detect_question[item], detected_options_item[option_item]):
                     number_of_included_option = number_of_included_option + 1
+                    nexVerticallyQuestionY = detected_options_item[option_item][3]
+
                     if option_item == last_option:
                         nexVerticallyQuestionY = detected_options_item[option_item][3]
                         x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
