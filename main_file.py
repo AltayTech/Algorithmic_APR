@@ -10,14 +10,14 @@ print('sdfsdfsadfsdfsa')
 from wand.image import Image as WandImage
 from PIL import Image, ImageDraw
 
-pdf_path = 'assets\\test_page190.pdf'
-image_path = 'assets\\test_page3.png'
+pdf_path = 'assets\\test_page2.pdf'
+image_path = 'assets\\4\\p-30.png'
 # config parameter
 number_of_option = 5
-number_of_column = 0
+number_of_column = 2
 
 question_margin_top = 5
-question_margin_bottom = 5
+question_margin_bottom = 55
 question_margin_left = 5
 question_margin_right = 1
 input_method = 'image'
@@ -32,9 +32,15 @@ def extract_text_with_coords(image_path):
     print(f"image_height: {image_height}")
 
     # Convert the image to grayscale
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY,)
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY, )
+    # Apply Gaussian blurring
+    blur = cv2.GaussianBlur(gray_image, (5, 5), 0)
 
-    datas = pytesseract.image_to_data(gray_image, config='--psm 6' )
+    # Adaptive thresholding (experiment with different block sizes and C values)
+    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY, 11, 2)
+
+    datas = pytesseract.image_to_data(thresh, config='--psm 6')
     print(f"datas: {datas}")
 
     text_datas = []
@@ -148,7 +154,7 @@ with pdfplumber.open(pdf_path) as pdf:
     detected_options = {}
     detected_options_box = []
 
-    if (input_method == 'image'):
+    if input_method == 'image':
         image = cv2.imread(image_path)
         image_height, image_width, _ = image.shape
         extracted_texts_with_coords = extract_text_with_coords(image_path)
@@ -199,8 +205,7 @@ with pdfplumber.open(pdf_path) as pdf:
     for item in detected_question_numbers_general:
 
         x0, y0, x1, y1 = (detected_question_numbers_general[item][0], detected_question_numbers_general[item][1],
-                          # pdf.pages[0].width - 10,
-                          # pdf.pages[0].height - 10
+
                           image_width,
                           image_height
                           )
@@ -234,34 +239,40 @@ with pdfplumber.open(pdf_path) as pdf:
                                       nextHorizontalQuestionX,
                                       nexVerticallyQuestionY)
                     detect_question[item] = (x0, y0, x1, y1)
+        number_of_included_option = 0
         for detected_options_item in detected_options_box:
             for option_item in detected_options_item:
-                if is_in_the_region(detect_question[item], detected_options_item[option_item]) \
-                        and option_item == last_option:
-                    nexVerticallyQuestionY = detected_options_item[option_item][3]
-                    x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
-                                      nextHorizontalQuestionX,
-                                      nexVerticallyQuestionY)
-                    detect_question[item] = (x0, y0, x1, y1)
-        dis_item = 0
-        selected_item = detect_question[item]
-        for all_boxes_item in all_boxes:
+                if is_in_the_region(detect_question[item], detected_options_item[option_item]):
+                    number_of_included_option = number_of_included_option + 1
+                    if option_item == last_option:
+                        nexVerticallyQuestionY = detected_options_item[option_item][3]
+                        x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
+                                          nextHorizontalQuestionX,
+                                          nexVerticallyQuestionY)
+                        detect_question[item] = (x0, y0, x1, y1)
 
-            if is_in_the_region(detect_question[item], all_boxes_item):
-                if dis_item < all_boxes_item[2] - detect_question[item][0]:
-                    dis_item = all_boxes_item[2] - detect_question[item][0]
-                    selected_item = all_boxes_item
-        nextHorizontalQuestionX = selected_item[2]
-        x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
-                          nextHorizontalQuestionX,
-                          nexVerticallyQuestionY)
-        detect_question[item] = (x0, y0, x1, y1)
+        if number_of_included_option < 1:
+            del detect_question[item]
+        else:
+            dis_item = 0
+            selected_item = detect_question[item]
+            for all_boxes_item in all_boxes:
 
-        x0, y0, x1, y1 = (
-            detect_question[item][0] - question_margin_left, detect_question[item][1] - question_margin_top,
-            nextHorizontalQuestionX + question_margin_right,
-            nexVerticallyQuestionY + question_margin_bottom)
-        detect_question[item] = (x0, y0, x1, y1)
+                if is_in_the_region(detect_question[item], all_boxes_item):
+                    if dis_item < all_boxes_item[2] - detect_question[item][0]:
+                        dis_item = all_boxes_item[2] - detect_question[item][0]
+                        selected_item = all_boxes_item
+                nextHorizontalQuestionX = selected_item[2]
+                x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
+                                  nextHorizontalQuestionX,
+                                  nexVerticallyQuestionY)
+            detect_question[item] = (x0, y0, x1, y1)
+
+            x0, y0, x1, y1 = (
+                detect_question[item][0] - question_margin_left, detect_question[item][1] - question_margin_top,
+                nextHorizontalQuestionX + question_margin_right,
+                nexVerticallyQuestionY + question_margin_bottom)
+            detect_question[item] = (x0, y0, x1, y1)
 
 print(f"detected_options_box: {len(detected_options_box)}")
 
@@ -292,7 +303,7 @@ for detected_options_item in detected_options_box:
         draw.rectangle([(x0, y0), (x1, y1)], outline="blue")
 
 for _, (x0, y0, x1, y1) in detect_question.items():
-    draw.rectangle([(x0, y0), (x1, y1)], outline="red", width=10)
+    draw.rectangle([(x0, y0), (x1, y1)], outline="red", width=3)
 
 # İmajı kaydetme
 img_with_all_boxes_resized_path = "result_image.jpg"
