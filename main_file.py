@@ -13,86 +13,79 @@ from PIL import Image, ImageDraw
 pdf_path = 'assets\\test_page190.pdf'
 image_path = 'assets\\test_page3.png'
 # config parameter
-number_of_option = 4
+number_of_option = 5
 number_of_column = 0
+
 question_margin_top = 5
 question_margin_bottom = 5
 question_margin_left = 5
 question_margin_right = 1
-input_method = 'pdf'
+input_method = 'image'
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 
 def extract_text_with_coords(image_path):
     # Read the image using OpenCV
     image = cv2.imread(image_path)
+    image_height, image_width, _ = image.shape
+    print(f"image_width: {image_width}")
+    print(f"image_height: {image_height}")
 
     # Convert the image to grayscale
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY,)
 
-    # Perform OCR using pytesseract
-    text = pytesseract.image_to_string(gray_image)
-
-    # Get the bounding boxes of each detected word
-    boxes = pytesseract.image_to_boxes(gray_image)
-    datas = pytesseract.image_to_data(gray_image)
-
-    # Process the bounding boxes
-    # for box in boxes.splitlines():
-    #     box = box.split()
-    #     # Extract coordinates and text
-    #     x, y, w, h = int(box[1]), int(box[2]), int(box[3]), int(box[4])
-    #     text = box[0]
-    #     # Draw bounding box
-    #     # cv2.rectangle(image, (x, y), (w, h), (0, 255, 0), 2)
-    #     # Display text
-    #     # cv2.putText(image, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-    # print(f"boxes: {boxes}")
-    print(f"boxes: {text}")
+    datas = pytesseract.image_to_data(gray_image, config='--psm 6' )
     print(f"datas: {datas}")
-    print(f"datas: {datas[0]}")
-    # print(f"datas: {pd.DataFrame(datas,columns=['level',	'page_num'	,'block_num',	'par_num'	,'line_num',	'word_num',	'left'	,'top',	'width',	'height',	'conf',	'text'])}")
 
-    # Display the result
-    # cv2.imshow('Image', image)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-    # """
-    # Reads an image, extracts text with bounding box coordinates,
-    # and returns a list of (text, x1, y1, x2, y2) tuples.
-    #
-    # Args:
-    #     image_path (str): Path to the image file.
-    #
-    # Returns:
-    #     list: A list of tuples containing the extracted text and its coordinates.
-    # """
-    #
-    # img = cv2.imread(image_path)
-    # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #
-    # # Handle potential noise and uneven lighting
-    # thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-    # blur = cv2.GaussianBlur(thresh, (3, 3), 0)
-    #
-    # # Detect text regions using adaptive thresholding
-    # text_contours = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
-    # print(f"text_contours: {text_contours}")
-    #
+    text_datas = []
+    for data in datas.splitlines():
+        data = data.split()
+        # print(f"data: {data}")
+
+        text_datas.append(data)
+    # print(f"text_datas: {text_datas}")
+
     text_data = []
-    # for index, text_datas in pd.DataFrame([datas]):
-    #     print(f"text_datas: {text_datas}")
-
-        # If text is not empty, append data
-        # if text_datas['text']:
-            # text_data.append((text_datas['text'].strip(), x, y, x + w, y + h))
-        # text_data.append({'text':text_datas['text'].to_string(),
-        #                       'x0':text_datas['left'],
-        #                       'top':text_datas['top'],
-        #                       'x1':text_datas['left']+text_datas['width'],
-        #                       'bottom':text_datas['left']+text_datas['height'],
-        #                       })
+    text_datas.remove(text_datas[0])
+    for text_datas_item in text_datas:
+        if len(text_datas_item) > 11:
+            text_data.append({'text': text_datas_item[11],
+                              'x0': float(text_datas_item[6]),
+                              'top': float(text_datas_item[7]),
+                              'x1': float(text_datas_item[6]) + float(text_datas_item[8]),
+                              'bottom': float(text_datas_item[7]) + float(text_datas_item[9]),
+                              })
+    print(f"text_data: {text_data}")
 
     return text_data
+
+
+# def extract_text_with_coords(image_path):
+#     # Read the image in grayscale mode
+#     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+#
+#     # Preprocess the image (optional, may improve accuracy)
+#     # ... (e.g., denoising, adaptive thresholding)
+#
+#     # Find contours (connected regions) in the image
+#     _, contours = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+#
+#     # Initialize list to store text and coordinates
+#     text_with_coords = []
+#
+#     for cnt in contours:
+#         x, y, w, h = cv2.boundingRect(cnt)
+#
+#         # Extract the region of interest (ROI) using the bounding box coordinates
+#         roi = img[y:y + h, x:x + w]
+#
+#         # Use Tesseract to recognize text from the ROI
+#         text = pytesseract.image_to_string(roi, config='--psm 6')  # Treat the ROI as a single block of text
+#
+#         # Append extracted text and coordinates to the list
+#         text_with_coords.append((text.strip(), x, y, x + w, y + h))
+#
+#     return text_with_coords
 
 
 # Detect the target rectangule is in main rect or not
@@ -126,7 +119,7 @@ def is_in_horizontal_region(mainRect, targetRect):
 def is_in_right(mainRect, targetRect):
     in_right = False
 
-    if (targetRect[0] - mainRect[0]) > 1:
+    if (targetRect[0] - mainRect[0]) > 5:
 
         in_right = True
     else:
@@ -156,35 +149,38 @@ with pdfplumber.open(pdf_path) as pdf:
     detected_options_box = []
 
     if (input_method == 'image'):
+        image = cv2.imread(image_path)
+        image_height, image_width, _ = image.shape
         extracted_texts_with_coords = extract_text_with_coords(image_path)
-        print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
+        # print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
 
     else:
 
         pdf.open(pdf_path)
+        image_width = pdf.pages[0].width
+        image_height = pdf.pages[0].height
 
         # Döküman boyutlarını ekrana basma
-        print(f"Döküman Boyutları: Genişlik: {pdf.pages[0].width}, Yükseklik: {pdf.pages[0].height}")
+        print(f"Döküman Boyutları: Genişlik: {image_width}, Yükseklik: {image_height}")
 
         # İlk sayfa için metin içeriği ve metinlerin koordinatlarını çıkarma
         page = pdf.pages[0]
         extracted_texts_with_coords = page.extract_words()
-        print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
-
+        # print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
 
     for item in extracted_texts_with_coords:
         # print(f"item index: {item}")
         detected_options = {}
 
         text = item['text'].strip()  # Boşlukları temizleme
-        x0, y0, x1, y1 = item['x0'], item['top'], item['x1'], item['bottom']
+        x0, y0, x1, y1 = float(item['x0']), float(item['top']), float(item['x1']), float(item['bottom'])
         all_boxes.append((x0, y0, x1, y1))
 
         if re.match(r"^[1-9][0-9]{0,2}\.$", text) and 1 <= int(text[:-1]) <= 120:
             # print(f"item index: {text}")
 
             detected_question_numbers_general[text] = (x0, y0, x1, y1)
-            # print(f"item detected_question_numbers_general: {detected_question_numbers_general[text]}")
+            print(f"item detected_question_numbers_general: {detected_question_numbers_general}")
 
         # A, B, C, D, E seçeneklerini tespit etme
         if re.match(r"^\s?[ABCDE]\s?\)$", text):
@@ -203,8 +199,11 @@ with pdfplumber.open(pdf_path) as pdf:
     for item in detected_question_numbers_general:
 
         x0, y0, x1, y1 = (detected_question_numbers_general[item][0], detected_question_numbers_general[item][1],
-                          pdf.pages[0].width - 10,
-                          pdf.pages[0].height - 10)
+                          # pdf.pages[0].width - 10,
+                          # pdf.pages[0].height - 10
+                          image_width,
+                          image_height
+                          )
         detect_question[item] = (x0, y0, x1, y1)
         nextHorizontalQuestionX = x1
         nexVerticallyQuestionY = y1
@@ -213,8 +212,8 @@ with pdfplumber.open(pdf_path) as pdf:
             if is_in_right(detect_question[item], detected_question_numbers_general[item2]) and number_of_column == 2:
                 nextHorizontalQuestionX = detected_question_numbers_general[item2][0] - 3
                 x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
-                                  nextHorizontalQuestionX,
-                                  nexVerticallyQuestionY)
+                                  image_width,
+                                  image_height)
                 detect_question[item] = (x0, y0, x1, y1)
 
             if is_in_the_region(detect_question[item], detected_question_numbers_general[item2]):
@@ -265,16 +264,21 @@ with pdfplumber.open(pdf_path) as pdf:
         detect_question[item] = (x0, y0, x1, y1)
 
 print(f"detected_options_box: {len(detected_options_box)}")
-# PDF'yi imaja dönüştürme
-with WandImage(filename=pdf_path, resolution=300) as source:
-    images = source.sequence
-    img_page_1 = WandImage(images[0])
-    img_page_1_path = "converted_image_page_1.jpg"
-    img_page_1.save(filename=img_page_1_path)
 
-# İmajı PIL ile açma ve boyutlandırma
-im = Image.open(img_page_1_path)
-resized_im = im.resize((int(pdf.pages[0].width), int(pdf.pages[0].height)))
+if input_method == 'pdf':
+    # PDF'yi imaja dönüştürme
+    with WandImage(filename=pdf_path, resolution=300) as source:
+        images = source.sequence
+        img_page_1 = WandImage(images[0])
+        img_page_1_path = "converted_image_page_1.jpg"
+        img_page_1.save(filename=img_page_1_path)
+
+    # İmajı PIL ile açma ve boyutlandırma
+    im = Image.open(img_page_1_path)
+    resized_im = im.resize((int(pdf.pages[0].width), int(pdf.pages[0].height)))
+else:
+    im = Image.open(image_path)
+    resized_im = im.resize((int(image_width), int(image_height)))
 
 # Yeniden boyutlandırılmış imaj üzerine dikdörtgen çizme
 draw = ImageDraw.Draw(resized_im)
@@ -282,13 +286,13 @@ for (x0, y0, x1, y1) in all_boxes:
     draw.rectangle([(x0, y0), (x1, y1)], outline="green")
 
 for _, (x0, y0, x1, y1) in detected_question_numbers_general.items():
-    draw.rectangle([(x0, y0), (x1, y1)], outline="red")
+    draw.rectangle([(x0, y0), (x1, y1)], outline="red", width=1)
 for detected_options_item in detected_options_box:
     for _, (x0, y0, x1, y1) in detected_options_item.items():
         draw.rectangle([(x0, y0), (x1, y1)], outline="blue")
 
 for _, (x0, y0, x1, y1) in detect_question.items():
-    draw.rectangle([(x0, y0), (x1, y1)], outline="red")
+    draw.rectangle([(x0, y0), (x1, y1)], outline="red", width=10)
 
 # İmajı kaydetme
 img_with_all_boxes_resized_path = "result_image.jpg"
