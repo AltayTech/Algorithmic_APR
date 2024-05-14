@@ -11,7 +11,7 @@ from wand.image import Image as WandImage
 from PIL import Image, ImageDraw
 
 pdf_path = 'assets\\test_page2.pdf'
-image_path = 'assets\\4\\p-30.png'
+image_path = 'assets\\4\\p-140.png'
 # config parameter
 number_of_option = 5
 number_of_column = 2
@@ -249,10 +249,10 @@ with pdfplumber.open(pdf_path) as pdf:
 
                     if option_item == last_option:
                         nexVerticallyQuestionY = detected_options_item[option_item][3]
-                        x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
+        x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
                                           nextHorizontalQuestionX,
                                           nexVerticallyQuestionY)
-                        detect_question[item] = (x0, y0, x1, y1)
+        detect_question[item] = (x0, y0, x1, y1)
 
         if number_of_included_option < 1:
             del detect_question[item]
