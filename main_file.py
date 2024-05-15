@@ -3,6 +3,8 @@ import pdfplumber
 import re
 import cv2
 import pytesseract
+import time
+import os
 # import pandas as pd
 import pandas as pd
 
@@ -10,21 +12,20 @@ print('sdfsdfsadfsdfsa')
 from wand.image import Image as WandImage
 from PIL import Image, ImageDraw
 
-pdf_path = 'assets\\test_page2.pdf'
-image_path = 'assets\\4\\p-140.png'
+pdf_path = 'assets\\p12.pdf'
+image_path = 'assets\\4\\p-210.png'
 # config parameter
 number_of_option = 5
 number_of_column = 2
-
 question_margin_top = 5
-question_margin_bottom = 55
+question_margin_bottom = 5
 question_margin_left = 5
 question_margin_right = 1
-input_method = 'image'
+input_method = 'pdf'
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
-def extract_text_with_coords(image_path):
+def extract_text_with_coords(image_path, ):
     # Read the image using OpenCV
     image = cv2.imread(image_path)
     image_height, image_width, _ = image.shape
@@ -146,168 +147,196 @@ def is_in_blew(mainRect, targetRect):
     return in_blew
 
 
-# PDF'ten metin içeriği ve metinlerin koordinatlarını çıkar
-with pdfplumber.open(pdf_path) as pdf:
-    detected_question_numbers_general = {}
-    detect_question = {}
-    all_boxes = []
-    detected_options = {}
-    detected_options_box = []
+def extract_question(pdf_path, page_number, book_number):
+    print(f"page_number: {page_number}")
 
-    if input_method == 'image':
-        image = cv2.imread(image_path)
-        image_height, image_width, _ = image.shape
-        extracted_texts_with_coords = extract_text_with_coords(image_path)
-        # print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
-
-    else:
-
-        pdf.open(pdf_path)
-        image_width = pdf.pages[0].width
-        image_height = pdf.pages[0].height
-
-        # Döküman boyutlarını ekrana basma
-        print(f"Döküman Boyutları: Genişlik: {image_width}, Yükseklik: {image_height}")
-
-        # İlk sayfa için metin içeriği ve metinlerin koordinatlarını çıkarma
-        page = pdf.pages[0]
-        extracted_texts_with_coords = page.extract_words()
-        # print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
-
-    for item in extracted_texts_with_coords:
-        # print(f"item index: {item}")
+    # PDF'ten metin içeriği ve metinlerin koordinatlarını çıkar
+    with pdfplumber.open(pdf_path, ) as pdf:
+        detected_question_numbers_general = {}
+        detect_question = {}
+        all_boxes = []
         detected_options = {}
+        detected_options_box = []
 
-        text = item['text'].strip()  # Boşlukları temizleme
-        x0, y0, x1, y1 = float(item['x0']), float(item['top']), float(item['x1']), float(item['bottom'])
-        all_boxes.append((x0, y0, x1, y1))
+        if input_method == 'image':
+            image = cv2.imread(image_path, )
+            image_height, image_width, _ = image.shape
+            extracted_texts_with_coords = extract_text_with_coords(image_path)
+            # print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
 
-        if re.match(r"^[1-9][0-9]{0,2}\.$", text) and 1 <= int(text[:-1]) <= 120:
-            # print(f"item index: {text}")
+        else:
 
-            detected_question_numbers_general[text] = (x0, y0, x1, y1)
-            print(f"item detected_question_numbers_general: {detected_question_numbers_general}")
+            # pdf
+            image_width = pdf.pages[page_number].width
+            image_height = pdf.pages[page_number].height
 
-        # A, B, C, D, E seçeneklerini tespit etme
-        if re.match(r"^\s?[ABCDE]\s?\)$", text):
-            detected_options[text] = (x0, y0, x1, y1)
-            # print(f"detected_options: {detected_options}")
-            detected_options_box.append(detected_options)
+            # Döküman boyutlarını ekrana basma
+            print(f"Döküman Boyutları: Genişlik: {image_width}, Yükseklik: {image_height}")
 
-    # Determine the last option item(D orE)
+            # İlk sayfa için metin içeriği ve metinlerin koordinatlarını çıkarma
+            page = pdf.pages[page_number]
+            extracted_texts_with_coords = page.extract_words()
+            # print(f"extracted_texts_with_coords: {extracted_texts_with_coords}")
 
-    if number_of_option == 4:
-        last_option = 'D)'
-    else:
-        last_option = 'E)'
+        for item in extracted_texts_with_coords:
+            # print(f"item index: {item}")
+            # print(f"item color: {item.get('stroking_color')}")
+            detected_options = {}
 
-    # Determine the last option item(D or E)
-    for item in detected_question_numbers_general:
+            text = item['text'].strip()  # Boşlukları temizleme
+            x0, y0, x1, y1 = float(item['x0']), float(item['top']), float(item['x1']), float(item['bottom'])
+            all_boxes.append((x0, y0, x1, y1))
 
-        x0, y0, x1, y1 = (detected_question_numbers_general[item][0], detected_question_numbers_general[item][1],
+            if re.match(r"^[1-9][0-9]{0,2}\.$", text) and 1 <= int(text[:-1]) <= 120:
+                # print(f"item index: {text}")
 
-                          image_width,
-                          image_height
-                          )
-        detect_question[item] = (x0, y0, x1, y1)
-        nextHorizontalQuestionX = x1
-        nexVerticallyQuestionY = y1
+                detected_question_numbers_general[text] = (x0, y0, x1, y1)
+                print(f"item detected_question_numbers_general: {detected_question_numbers_general}")
 
-        for item2 in detected_question_numbers_general:
-            if is_in_right(detect_question[item], detected_question_numbers_general[item2]) and number_of_column == 2:
-                nextHorizontalQuestionX = detected_question_numbers_general[item2][0] - 3
-                x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
-                                  image_width,
-                                  image_height)
-                detect_question[item] = (x0, y0, x1, y1)
+            # A, B, C, D, E seçeneklerini tespit etme
+            if re.match(r"^\s?[ABCDE]\s?\)$", text):
+                detected_options[text] = (x0, y0, x1, y1)
+                # print(f"detected_options: {detected_options}")
+                detected_options_box.append(detected_options)
 
-            if is_in_the_region(detect_question[item], detected_question_numbers_general[item2]):
-                # print(f"is_in_the_region: {detected_question_numbers_general[item2]}")
+        # Determine the last option item(D orE)
 
-                detect_question[item] = (x0, y0, x1, y1)
-                if not is_in_right(detect_question[item], detected_question_numbers_general[item2]):
-                    if is_in_blew(detect_question[item], detected_question_numbers_general[item2]):
-                        print(f"is_in_blew: {detected_question_numbers_general[item2]}")
-                        nexVerticallyQuestionY = detected_question_numbers_general[item2][1] - 3
+        if number_of_option == 4:
+            last_option = 'D)'
+        else:
+            last_option = 'E)'
+
+        # Determine the last option item(D or E)
+        for item in detected_question_numbers_general:
+
+            x0, y0, x1, y1 = (detected_question_numbers_general[item][0], detected_question_numbers_general[item][1],
+
+                              image_width,
+                              image_height
+                              )
+            detect_question[item] = (x0, y0, x1, y1)
+            nextHorizontalQuestionX = x1
+            nexVerticallyQuestionY = y1
+
+            for item2 in detected_question_numbers_general:
+                if is_in_right(detect_question[item],
+                               detected_question_numbers_general[item2]) and number_of_column == 2:
+                    nextHorizontalQuestionX = detected_question_numbers_general[item2][0] - 3
+                    x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
+                                      image_width,
+                                      image_height)
+                    detect_question[item] = (x0, y0, x1, y1)
+
+                if is_in_the_region(detect_question[item], detected_question_numbers_general[item2]):
+                    # print(f"is_in_the_region: {detected_question_numbers_general[item2]}")
+
+                    detect_question[item] = (x0, y0, x1, y1)
+                    if not is_in_right(detect_question[item], detected_question_numbers_general[item2]):
+                        if is_in_blew(detect_question[item], detected_question_numbers_general[item2]):
+                            # print(f"is_in_blew: {detected_question_numbers_general[item2]}")
+                            nexVerticallyQuestionY = detected_question_numbers_general[item2][1] - 3
+                            x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
+                                              nextHorizontalQuestionX,
+                                              nexVerticallyQuestionY)
+                            detect_question[item] = (x0, y0, x1, y1)
+                    else:
+                        nextHorizontalQuestionX = detected_question_numbers_general[item2][0] - 3
                         x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
                                           nextHorizontalQuestionX,
                                           nexVerticallyQuestionY)
                         detect_question[item] = (x0, y0, x1, y1)
-                else:
-                    nextHorizontalQuestionX = detected_question_numbers_general[item2][0] - 3
+            number_of_included_option = 0
+            have_last_option = False
+            for detected_options_item in detected_options_box:
+                for option_item in detected_options_item:
+                    if is_in_the_region(detect_question[item], detected_options_item[option_item]):
+                        number_of_included_option = number_of_included_option + 1
+                        nexVerticallyQuestionY = detected_options_item[option_item][3]
+
+                        if option_item == last_option:
+                            nexVerticallyQuestionY = detected_options_item[option_item][3]
+            x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
+                              nextHorizontalQuestionX,
+                              nexVerticallyQuestionY)
+            detect_question[item] = (x0, y0, x1, y1)
+
+            if number_of_included_option < 1:
+                del detect_question[item]
+            else:
+                dis_item = 0
+                selected_item = detect_question[item]
+                for all_boxes_item in all_boxes:
+
+                    if is_in_the_region(detect_question[item], all_boxes_item):
+                        if dis_item < all_boxes_item[2] - detect_question[item][0]:
+                            dis_item = all_boxes_item[2] - detect_question[item][0]
+                            selected_item = all_boxes_item
+                    nextHorizontalQuestionX = selected_item[2]
                     x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
                                       nextHorizontalQuestionX,
                                       nexVerticallyQuestionY)
-                    detect_question[item] = (x0, y0, x1, y1)
-        number_of_included_option = 0
-        have_last_option = False
-        for detected_options_item in detected_options_box:
-            for option_item in detected_options_item:
-                if is_in_the_region(detect_question[item], detected_options_item[option_item]):
-                    number_of_included_option = number_of_included_option + 1
-                    nexVerticallyQuestionY = detected_options_item[option_item][3]
+                detect_question[item] = (x0, y0, x1, y1)
 
-                    if option_item == last_option:
-                        nexVerticallyQuestionY = detected_options_item[option_item][3]
-        x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
-                                          nextHorizontalQuestionX,
-                                          nexVerticallyQuestionY)
-        detect_question[item] = (x0, y0, x1, y1)
+                x0, y0, x1, y1 = (
+                    detect_question[item][0] - question_margin_left, detect_question[item][1] - question_margin_top,
+                    nextHorizontalQuestionX + question_margin_right,
+                    nexVerticallyQuestionY + question_margin_bottom)
+                detect_question[item] = (x0, y0, x1, y1)
 
-        if number_of_included_option < 1:
-            del detect_question[item]
-        else:
-            dis_item = 0
-            selected_item = detect_question[item]
-            for all_boxes_item in all_boxes:
+    print(f"detected_options_box: {len(detected_options_box)}")
 
-                if is_in_the_region(detect_question[item], all_boxes_item):
-                    if dis_item < all_boxes_item[2] - detect_question[item][0]:
-                        dis_item = all_boxes_item[2] - detect_question[item][0]
-                        selected_item = all_boxes_item
-                nextHorizontalQuestionX = selected_item[2]
-                x0, y0, x1, y1 = (detect_question[item][0], detect_question[item][1],
-                                  nextHorizontalQuestionX,
-                                  nexVerticallyQuestionY)
-            detect_question[item] = (x0, y0, x1, y1)
+    if input_method == 'pdf':
+        # print(f"input_method: {input_method}")
 
-            x0, y0, x1, y1 = (
-                detect_question[item][0] - question_margin_left, detect_question[item][1] - question_margin_top,
-                nextHorizontalQuestionX + question_margin_right,
-                nexVerticallyQuestionY + question_margin_bottom)
-            detect_question[item] = (x0, y0, x1, y1)
+        # PDF'yi imaja dönüştürme
+        with WandImage(filename="{}[{}]".format(pdf_path, page_number), resolution=300) as source:
 
-print(f"detected_options_box: {len(detected_options_box)}")
+            images = source.sequence
 
-if input_method == 'pdf':
-    # PDF'yi imaja dönüştürme
-    with WandImage(filename=pdf_path, resolution=300) as source:
-        images = source.sequence
-        img_page_1 = WandImage(images[0])
-        img_page_1_path = "converted_image_page_1.jpg"
-        img_page_1.save(filename=img_page_1_path)
+            img_page_1 = WandImage(images[0])
+            img_page_1_path = "converted_image_page_1.jpg"
+            img_page_1.save(filename=img_page_1_path)
 
-    # İmajı PIL ile açma ve boyutlandırma
-    im = Image.open(img_page_1_path)
-    resized_im = im.resize((int(pdf.pages[0].width), int(pdf.pages[0].height)))
-else:
-    im = Image.open(image_path)
-    resized_im = im.resize((int(image_width), int(image_height)))
+        # İmajı PIL ile açma ve boyutlandırma
+        im = Image.open(img_page_1_path)
+        resized_im = im.resize((int(pdf.pages[page_number].width), int(pdf.pages[page_number].height)))
+    else:
+        im = Image.open(image_path)
+        resized_im = im.resize((int(image_width), int(image_height)))
 
-# Yeniden boyutlandırılmış imaj üzerine dikdörtgen çizme
-draw = ImageDraw.Draw(resized_im)
-for (x0, y0, x1, y1) in all_boxes:
-    draw.rectangle([(x0, y0), (x1, y1)], outline="green")
+    # Yeniden boyutlandırılmış imaj üzerine dikdörtgen çizme
+    draw = ImageDraw.Draw(resized_im)
 
-for _, (x0, y0, x1, y1) in detected_question_numbers_general.items():
-    draw.rectangle([(x0, y0), (x1, y1)], outline="red", width=1)
-for detected_options_item in detected_options_box:
-    for _, (x0, y0, x1, y1) in detected_options_item.items():
-        draw.rectangle([(x0, y0), (x1, y1)], outline="blue")
+    # for (x0, y0, x1, y1) in all_boxes:
+    #     draw.rectangle([(x0, y0), (x1, y1)], outline="green")
 
-for _, (x0, y0, x1, y1) in detect_question.items():
-    draw.rectangle([(x0, y0), (x1, y1)], outline="red", width=3)
+    for _, (x0, y0, x1, y1) in detected_question_numbers_general.items():
+        draw.rectangle([(x0, y0), (x1, y1)], outline="red", width=1)
+    for detected_options_item in detected_options_box:
+        for _, (x0, y0, x1, y1) in detected_options_item.items():
+            draw.rectangle([(x0, y0), (x1, y1)], outline="blue")
 
-# İmajı kaydetme
-img_with_all_boxes_resized_path = "result_image.jpg"
-resized_im.save(img_with_all_boxes_resized_path)
+    for _, (x0, y0, x1, y1) in detect_question.items():
+        draw.rectangle([(x0, y0), (x1, y1)], outline="red", width=1)
+
+    # İmajı kaydetme
+    img_with_all_boxes_resized_path = f"results{book_number}\\result_image{page_number}.jpg"
+    resized_im.save(img_with_all_boxes_resized_path)
+
+
+start_time = time.time()
+
+# extract_question(17)
+for j in range(5, 12, 1):
+    pdf_path = f'assets\\p{j}.pdf'
+    os.makedirs(f"results{j}", exist_ok=True)
+    book_number = j
+    with pdfplumber.open(pdf_path, ) as pdf:
+        total_page = len(pdf.pages)
+        print(f"page number book p{j}: {total_page}")
+
+    for i in range(1, total_page - 1, 1):
+        extract_question(pdf_path, i, book_number)
+end_time = time.time()
+execution_time = end_time - start_time
+print(f"execution_time {execution_time:.2f}")
