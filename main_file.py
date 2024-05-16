@@ -196,7 +196,7 @@ def extract_question(pdf_path, page_number, book_number):
                 x0, y0, x1, y1 = float(item['x0']), float(item['top']), float(item['x1']), float(item['bottom'])
                 all_boxes.append((x0, y0, x1, y1))
 
-                if re.match(r"^[1-9][0-9]{0,2}\.$", text) and 1 <= int(text[:-1]) <= 120:
+                if re.match(r"^\s?[1-9][0-9]{0,2}\.$", text) and 1 <= int(text[:-1]) <= 120:
                     # print(f"item index: {text}")
 
                     detected_question_numbers_general[text] = (x0, y0, x1, y1)
@@ -336,18 +336,18 @@ start_time = time.time()
 
 # extract_question(17)
 if input_method == 'pdf':
-    for j in range(4, 5, 1):
+    for j in range(6, 10, 1):
         pdf_path = f'assets\\p{j}.pdf'
         os.makedirs(f"results{j}", exist_ok=True)
         book_number = j
         print(f"book_number: {book_number}")
 
-    with pdfplumber.open(pdf_path, ) as pdf:
-        total_page = len(pdf.pages)
-        print(f"page number book p{j}: {total_page}")
+        with pdfplumber.open(pdf_path, ) as pdf:
+            total_page = len(pdf.pages)
+            print(f"page number book p{j}: {total_page}")
 
-    for i in range(38, 39, 1):
-        extract_question(pdf_path, i, book_number)
+        for i in range(56, 57, 1):
+            extract_question(pdf_path, i, book_number)
 else:
     for i in range(1, 52, 1):
         image_path = f'assets\\4\\p-{i}.png'
