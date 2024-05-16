@@ -182,22 +182,31 @@ def extract_question(pdf_path, page_number, book_number):
         # print(f"item index: {item}")
         # print(f"item color: {item.get('stroking_color')}")
         detected_options = {}
+        if len(extracted_texts_with_coords)-1 > extracted_texts_with_coords.index(item):
+            next_item = extracted_texts_with_coords[extracted_texts_with_coords.index(item) + 1]
+            if next_item['text'] == 'ÜNİTE':
+                print(f"ünite: {item}")
+                print(f"        extracted_texts_with_coords.index(item): {extracted_texts_with_coords.index(item)}")
+                print(f"before ünite: {extracted_texts_with_coords[extracted_texts_with_coords.index(item) - 1]}")
 
-        text = item['text'].strip()  # Boşlukları temizleme
-        x0, y0, x1, y1 = float(item['x0']), float(item['top']), float(item['x1']), float(item['bottom'])
-        all_boxes.append((x0, y0, x1, y1))
+                # del extracted_texts_with_coords[extracted_texts_with_coords.index(item)]
+            else:
 
-        if re.match(r"^[1-9][0-9]{0,2}\.$", text) and 1 <= int(text[:-1]) <= 120:
-            # print(f"item index: {text}")
+                text = item['text'].strip()  # Boşlukları temizleme
+                x0, y0, x1, y1 = float(item['x0']), float(item['top']), float(item['x1']), float(item['bottom'])
+                all_boxes.append((x0, y0, x1, y1))
 
-            detected_question_numbers_general[text] = (x0, y0, x1, y1)
-            print(f"item detected_question_numbers_general: {detected_question_numbers_general}")
+                if re.match(r"^[1-9][0-9]{0,2}\.$", text) and 1 <= int(text[:-1]) <= 120:
+                    # print(f"item index: {text}")
 
-        # A, B, C, D, E seçeneklerini tespit etme
-        if re.match(r"^\s?[ABCDE]\s?\)$", text):
-            detected_options[text] = (x0, y0, x1, y1)
-            # print(f"detected_options: {detected_options}")
-            detected_options_box.append(detected_options)
+                    detected_question_numbers_general[text] = (x0, y0, x1, y1)
+                    print(f"item detected_question_numbers_general: {detected_question_numbers_general}")
+
+                # A, B, C, D, E seçeneklerini tespit etme
+                if re.match(r"^\s?[ABCDE]\s?\)$", text):
+                    detected_options[text] = (x0, y0, x1, y1)
+                    # print(f"detected_options: {detected_options}")
+                    detected_options_box.append(detected_options)
 
     # Determine the last option item(D orE)
 
@@ -246,7 +255,6 @@ def extract_question(pdf_path, page_number, book_number):
                                       nexVerticallyQuestionY)
                     detect_question[item] = (x0, y0, x1, y1)
         number_of_included_option = 0
-        have_last_option = False
         for detected_options_item in detected_options_box:
             for option_item in detected_options_item:
                 if is_in_the_region(detect_question[item], detected_options_item[option_item]):
@@ -328,7 +336,7 @@ start_time = time.time()
 
 # extract_question(17)
 if input_method == 'pdf':
-    for j in range(10, 11, 1):
+    for j in range(4, 5, 1):
         pdf_path = f'assets\\p{j}.pdf'
         os.makedirs(f"results{j}", exist_ok=True)
         book_number = j
@@ -338,7 +346,7 @@ if input_method == 'pdf':
         total_page = len(pdf.pages)
         print(f"page number book p{j}: {total_page}")
 
-    for i in range(150, 179, 1):
+    for i in range(38, 39, 1):
         extract_question(pdf_path, i, book_number)
 else:
     for i in range(1, 52, 1):
